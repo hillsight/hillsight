@@ -1,1 +1,1 @@
-export * from 'https://github.com/hillsight/exchange/raw/main/mod.ts'
+export * from "https://raw.githubusercontent.com/hillsight/exchange/0.1.0/mod.ts"
