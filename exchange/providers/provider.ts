@@ -1,129 +1,140 @@
-import { resolve } from "https://deno.land/std@0.149.0/path/mod.ts";
+import { Interval, Kline, Symbol } from "../../generic.ts";
 
 /**
  * Representation of the account balance.
- * A object with symbols as keys and balance as value.
+ * A object with currencies as keys and balance as value.
  */
-export type Balance = {
+ export type Balance = {
   [key: string]: number;
 }
 
-/**
- * Required supported intervals for the provider.
- */
-export type Interval = '1m' | '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '6h' | '8h' | '12h' | '1d' | '3d' | '1w';
+export interface Order {
+  /** The type of the order. (LIMIT or MARKET) */
+  type: 'LIMIT' | 'MARKET';
 
-/**
- * Representation of a kline.
- * `[time, open, high, low, close, volume]`
- */
-export type Kline = [number, number, number, number, number, number];
+  /** The side of the order. (buy or sell) */
+  side: 'buy' | 'sell';
 
-/**
- * Representation of a symbol pair.
- * @example ['BTC', 'USD'] or ['BTC', 'USDT']
- */
-export type Symbol = [string, string];
+  /** 
+   * The quantity of the order.
+   */
+  quantity: number;
 
-export type Provider = {
+  /** 
+   * The price of the order. Ignored if the quantity is represented as quote currency.
+   * @see quote
+   */
+  price?: number;
+
+  /** 
+   * If the order quantity is represented in a quote currency.
+   * @default false
+   */
+  quote?: boolean;
+}
+
+export interface Position {
+  /** The id of the position. */
+  id: string;
+
+  /** The symbol of the position. */
+  symbol: Symbol;
+  
+  /** The side of the position. */
+  side: 'buy' | 'sell';
+
+  /** The quantity of the position. */
+  quantity: number;
+
+  /** The price of the position. */
+  price: number;
+
+  /** The time of the position. */
+  time: number;
+
+  /** The slippage of the position. (optional) */
+  slippage?: number;
+}
+
+export abstract class Exchange {
   name: string;
 
-  /**
-   * Get the balance of an account.
-   */
-  balance(): Promise<Balance>;
+  constructor(name: string) {
+    this.name = name;
+  }
 
   /**
-   * Get a list of all available symbols.
+   * Get the available balance of the account.
+   * @example {'BTC': 0.1, 'ETH': 0.2}
+   * @returns The balance of the account.
    */
-  symbols(): Promise<Symbol[]>;
+  abstract balance(): Promise<Balance>;
+
+  /**
+   * Get the available symbol pairs on the exchange.
+   * @example [['BTC', 'USDT'], ['ETH', 'USDT']]
+   * @returns The available symbol pairs on the exchange.
+   */
+  abstract symbols(): Promise<Symbol[]>;
 
   /**
    * Get the current time on the exchange. *(Used for time synchronization)*
    * @returns The current time on the exchange.
    * @throws An error if the time cannot be retrieved.
+   * @example 1589788800
    */
-  time(): Promise<number>;
+  abstract time(): Promise<number>;
 
   /**
-   * Place a limit order on the exchange.
+   * Place a order on the exchange.
    * @param symbol The symbol to trade.
-   * @param side The side of the order. (buy or sell)
-   * @param price The price of the order.
-   * @param quantity The quantity of the order.
+   * @param options The options of the order.
+   * @throws An error if the order cannot be placed.
    */
-  order_limit(symbol: Symbol, side: 'buy' | 'sell', quantity: number, price: number): Promise<string>;
-
-  /**
-   * Place a market order on the exchange.
-   * @param symbol The symbol to trade.
-   * @param side The side of the order. (buy or sell)
-   * @param quantity The quantity of the order. (optional)
-   * @param quote The amount of quote currency to spend. (optional)
-   */
-  order_market(symbol: Symbol, side: 'buy' | 'sell', quantity?: number, quote?: number): Promise<string>;
+  abstract order(symbol: Symbol, options: Order): Promise<Position>;
 
   /**
    * Cancel an order on the exchange.
    * @param symbol The symbol to trade.
    * @param id The id of the order to cancel.
+   * @throws An error if the order cannot be canceled.
    */
-  cancel(symbol: Symbol, id: string): Promise<boolean>;
+  abstract cancel(symbol: Symbol, id: string | Position): Promise<boolean>;
+
+  /**
+   * Get the current price of a symbol or multiple symbols.
+   * @param symbols The symbol or symbols to get the price of.
+   * @returns The current price of the symbol.
+   * @throws An error if the price cannot be retrieved.
+   */
+  abstract price(...symbols: Symbol[]): Promise<{
+    [key: string]: number;
+  }>;
 
   /**
    * Stream klines for multiple symbols and intervals.
    * @param symbols The symbols to stream.
+   * @throws An error if the stream cannot be started.
+   * @example [ [symbol('BTC', 'USD'), '1m'], [symbol('ETH', 'USD'), '1m'] ]
+   * @example
+   * ```ts
+   * const pairlist = new Pairlist( exchange, filter );
+   * const symbols = pairlist.at( exchange.time(), "1m" );
+   * exchange.stream( symbols );
+   * ```
+   * @returns A stream of klines.
    */
-  stream(symbols: {
-    symbol: Symbol;
-    interval: Interval;
-  }[]): AsyncGenerator<[Symbol, Kline], void, unknown>
+  abstract stream(symbols: [Symbol, Interval][]): AsyncGenerator<[Symbol, Kline, Interval], void, unknown>
 
   /**
-   * Get historical data for a symbol and interval.
-   * @param symbol The symbol to get historical data for.
-   * @param interval The interval to get historical data for.
-   * @param start The start time of the historical data.
-   * @param end The end time of the historical data.
+   * Stream historical klines for a symbol in a specific time range and interval.
+   * @param symbols The symbols to stream.
+   * @param timerange The time range to get the klines of.
+   * @throws An error if the stream cannot be started.
+   * @example [ [symbol('BTC', 'USD'), '1m'], [symbol('ETH', 'USD'), '1m'] ]
    */
-  history(symbol: Symbol, interval: Interval, start: Date, end?: Date): Promise<Kline[]>;
+  abstract history(symbols: [Symbol, Interval][], timerange: {
+    from: Date,
+    to?: Date
+  }): AsyncGenerator<[Symbol, Kline, Interval], void, unknown>;
 }
-
-/**
- * The credentials to use to authenticate with the exchange.
- */
-export type Credentials = {
-  api_key?: string;
-  secret_key?: string;
-}
-
-/**
- * Create a new exchange provider.
- * @param provider The exchange provider service to use.
- * @returns A function that can be used to trigger the provider.
- * 
- * @example
- * ```ts
- * createProvider(({ api_key, secret_key, ...options }) => {
- *    // provider service...
- * })
- * ```
- * @example
- * Example of a static provider service, e.g. a simulator.
- * ```ts
- * createProvider({
- *    // static provider service...
- * })
- * ```
- */
-export function createProvider(provider: Provider): () => Provider;
-export function createProvider<T extends Record<string, unknown>>(provider: ((options: Credentials & T) => Provider)): (options: Credentials & T) => Provider;
-export function createProvider<T extends Record<string, unknown>>(provider: Provider | ((options: Credentials & T) => Provider)): (options: Credentials & T) => Provider {
-  if (typeof provider === 'function') {
-    return (options) => provider(options);
-  }
-  return () => provider;
-}
-
-export const DEFAULT_CACHE_DIR = resolve(Deno.cwd(), '.cache');
-export const ACCEPTABLE_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w'];
