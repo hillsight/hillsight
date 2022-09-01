@@ -200,3 +200,27 @@ Deno.bench("Math.clamp", { group: "clamp", baseline: true }, () => {
 Deno.bench("Math.clamp (native)", { group: "clamp" }, () => {
   test(value => Math.min(Math.max(value, 5), 20), true);
 });
+
+Deno.bench("Math.gt", () => {
+  test(series => math.gt(series, 10), false);
+});
+
+Deno.bench("Math.gte", () => {
+  test(series => math.gte(series, 10), false);
+});
+
+Deno.bench("Math.lt", () => {
+  test(series => math.lt(series, 10), false);
+});
+
+Deno.bench("Math.lte", () => {
+  test(series => math.lte(series, 10), false);
+});
+
+Deno.bench("Math.eq", () => {
+  test(series => math.eq(series, 10), false);
+});
+
+Deno.bench("Math.neq", () => {
+  test(series => math.neq(series, 10), false);
+});

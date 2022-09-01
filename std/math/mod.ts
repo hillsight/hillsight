@@ -223,7 +223,7 @@ export function avg(source: Series<number>, length: number): Series<number> {
  */
 export function diff(source: Series<number>, length: number): Series<number> {
   return map(source, (value, i) => {
-    return (i + length < source.length ? source.at(i + length) ?? 0 : value) - value;
+    return (i + length < source.length ? (source.at(i + length) ?? 0) : value) - value;
   });
 }
 
