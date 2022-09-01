@@ -2,7 +2,6 @@ import { resolve } from "https://deno.land/std@0.149.0/path/mod.ts";
 import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
 import {
   ensureDirSync,
-  existsSync,
 } from "https://deno.land/std@0.149.0/fs/mod.ts";
 
 import { ACCEPTABLE_INTERVALS, DEFAULT_CACHE_DIR } from "../mod.ts";
