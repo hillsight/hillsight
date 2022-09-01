@@ -16,6 +16,7 @@ export class Indicator<T> implements Series<T> {
   constructor(fn: (i: number) => T, length: number) {
     this.length = length;
     this.#function = fn;
+    this.#function.bind(this);
   }
 
   /**
