@@ -8,7 +8,7 @@ export interface Series<T> extends Iterable<T | undefined> {
   at(index: number): T | undefined;
 }
 
-export class Indicator<T> implements Series<T> {
+export class LazySeries<T> implements Series<T> {
   #cache: T[] = [];
   #function: (i: number) => T;
 
